@@ -1,11 +1,12 @@
-# zmk-web
+# zmk-web-player
 
-Browser SDK for `zmk-sid`, built with Go WebAssembly and the Web Audio API.
+Browser SDK for playing Commodore 64 SID tunes in web apps, powered by
+`zmk-sid`, Go WebAssembly, and the Web Audio API.
 
-`zmk-web` is intentionally UI-free at the integration layer. It gives web apps a
-small JavaScript API for loading SID files, reading metadata, rendering PCM
-chunks, and playing audio in the browser. The included page is only a demo
-consumer of that SDK.
+`zmk-web-player` is intentionally UI-free at the integration layer. It gives web apps a
+small JavaScript API for loading `.sid` tune files, reading PSID/RSID metadata,
+rendering SID audio as PCM chunks, and playing those tunes in the browser. The
+included page is only a demo consumer of that SDK.
 
 ## Requirements
 
@@ -13,6 +14,7 @@ consumer of that SDK.
 - A local checkout of `../zmk-sid`. For now, `go.mod` uses a local `replace` so
   both repositories can be developed together.
 - A browser with WebAssembly and Web Audio support.
+- One or more `.sid` tune files to load locally in the browser.
 
 ## Build
 
@@ -23,7 +25,7 @@ make build
 The build writes generated/browser assets to `dist/`:
 
 - `dist/zmk-sid.js` - public browser SDK
-- `dist/zmk-web.wasm` - compiled Go SID bridge
+- `dist/zmk-web-player.wasm` - compiled Go SID bridge
 - `dist/wasm_exec.js` - copied from the local Go toolchain
 
 `dist/` is ignored by Git because these files are generated.
@@ -46,23 +48,23 @@ If that port is already used:
 make serve PORT=9090
 ```
 
-The demo can choose or drop a local `.sid` file. SID files stay in the browser
-and are not uploaded anywhere.
+The demo can choose or drop a local `.sid` tune file. SID files stay in the
+browser and are not uploaded anywhere.
 
 Browser audio autoplay rules apply: call playback from a user gesture, such as a
 button click.
 
 ## Use As A Browser SDK
 
-Copy or serve these files together:
+Copy or serve these files together from the website that should play SID tunes:
 
 ```text
 dist/zmk-sid.js
-dist/zmk-web.wasm
+dist/zmk-web-player.wasm
 dist/wasm_exec.js
 ```
 
-Import the SDK from your page:
+Import the SDK from your page and load a SID tune from a browser `File`:
 
 ```html
 <script type="module">
@@ -79,13 +81,13 @@ Import the SDK from your page:
 </script>
 ```
 
-By default, `zmk-sid.js` loads `wasm_exec.js` and `zmk-web.wasm` from the same
+By default, `zmk-sid.js` loads `wasm_exec.js` and `zmk-web-player.wasm` from the same
 directory as itself. If you serve those files elsewhere, pass explicit URLs:
 
 ```js
 const zmk = await createZmkSid({
   wasmExecURL: "/assets/zmk/wasm_exec.js",
-  wasmURL: "/assets/zmk/zmk-web.wasm",
+  wasmURL: "/assets/zmk/zmk-web-player.wasm",
 });
 ```
 

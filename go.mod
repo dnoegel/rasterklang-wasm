@@ -1,4 +1,4 @@
-module github.com/dnoegel/zmk-web
+module github.com/dnoegel/zmk-web-player
 
 go 1.26
 

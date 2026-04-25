@@ -82,10 +82,7 @@ window.addEventListener("beforeunload", () => stopPlayback({ updateStatus: false
 async function boot() {
   try {
     setRuntime("loading", "WASM loading");
-    state.sdk = await createZmkSid({
-      wasmExecURL: "./dist/wasm_exec.js",
-      wasmURL: "./dist/zmk-web.wasm",
-    });
+    state.sdk = await createZmkSid();
     state.wasmReady = true;
     setRuntime("ready", "SDK ready");
     setStatus("Load a SID file to begin.", "ok");

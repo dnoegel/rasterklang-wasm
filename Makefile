@@ -1,7 +1,7 @@
 GO ?= go
 PORT ?= 8080
 DIST := dist
-WASM := $(DIST)/zmk-web.wasm
+WASM := $(DIST)/zmk-web-player.wasm
 WASM_EXEC := $(DIST)/wasm_exec.js
 SDK := $(DIST)/zmk-sid.js
 

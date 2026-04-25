@@ -1,5 +1,5 @@
 const defaultWasmExecURL = defaultAssetURL("./wasm_exec.js");
-const defaultWasmURL = defaultAssetURL("./zmk-web.wasm");
+const defaultWasmURL = defaultAssetURL("./zmk-web-player.wasm");
 const defaultChunkFrames = 4096;
 const defaultScheduleAheadSeconds = 0.72;
 const defaultScheduleIntervalMs = 75;
@@ -349,7 +349,7 @@ function numberOrDefault(value, fallback) {
 function assertOK(result) {
   if (!result || !result.ok) {
     throw new ZmkSidError(
-      result && result.error ? result.error : "zmk-web failed.",
+      result && result.error ? result.error : "zmk-web-player failed.",
       result,
     );
   }
