@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>zmk-web SID Player</title>
+    <meta
+      name="description"
+      content="A browser-based SID player powered by zmk-sid and Go WebAssembly."
+    >
+    <meta name="theme-color" content="#f4f5f2">
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="product">zmk-web</p>
+        <h1>SID Player</h1>
+      </div>
+      <div class="runtime" id="runtimeState" data-state="loading">WASM loading</div>
+    </header>
+
+    <main class="app-shell" aria-label="SID player">
+      <section class="panel panel--controls" aria-labelledby="fileTitle">
+        <div class="panel__heading">
+          <h2 id="fileTitle">File</h2>
+          <p id="fileName">No file loaded</p>
+        </div>
+
+        <div
+          class="dropzone"
+          id="dropzone"
+          aria-label="SID file drop area"
+        >
+          <input class="visually-hidden" id="fileInput" type="file" accept=".sid">
+          <span class="dropzone__title">Drop .sid file</span>
+          <button class="secondary-action" id="chooseButton" type="button">Choose file</button>
+        </div>
+
+        <div class="control-grid">
+          <label class="field" for="subtuneSelect">
+            <span>Subtune</span>
+            <select id="subtuneSelect" disabled>
+              <option value="">-</option>
+            </select>
+          </label>
+
+          <div class="transport" aria-label="Playback controls">
+            <button class="primary-action" id="playButton" type="button" disabled>Play</button>
+            <button class="stop-action" id="stopButton" type="button" disabled>Stop</button>
+          </div>
+        </div>
+
+        <div class="status-line" id="statusLine" role="status" aria-live="polite">
+          Load a SID file to begin.
+        </div>
+      </section>
+
+      <section class="panel panel--metadata" aria-labelledby="metadataTitle">
+        <div class="panel__heading">
+          <h2 id="metadataTitle">Metadata</h2>
+          <p id="supportState">Waiting for file</p>
+        </div>
+
+        <dl class="metadata-grid">
+          <div>
+            <dt>Title</dt>
+            <dd id="metaTitle">-</dd>
+          </div>
+          <div>
+            <dt>Author</dt>
+            <dd id="metaAuthor">-</dd>
+          </div>
+          <div>
+            <dt>Released</dt>
+            <dd id="metaReleased">-</dd>
+          </div>
+          <div>
+            <dt>Subtunes</dt>
+            <dd id="metaSubtunes">-</dd>
+          </div>
+          <div>
+            <dt>Default</dt>
+            <dd id="metaDefault">-</dd>
+          </div>
+          <div>
+            <dt>Clock</dt>
+            <dd id="metaClock">-</dd>
+          </div>
+          <div>
+            <dt>SID model</dt>
+            <dd id="metaModel">-</dd>
+          </div>
+          <div>
+            <dt>Format</dt>
+            <dd id="metaFormat">-</dd>
+          </div>
+        </dl>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <span>Local file playback</span>
+      <span>Go WASM plus Web Audio</span>
+    </footer>
+  </body>
+</html>
