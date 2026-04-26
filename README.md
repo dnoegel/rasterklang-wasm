@@ -11,10 +11,18 @@ included page is only a demo consumer of that SDK.
 ## Requirements
 
 - Go 1.26 or newer with the standard `js/wasm` target.
-- A local checkout of `../zmk-sid`. For now, `go.mod` uses a local `replace` so
-  both repositories can be developed together.
 - A browser with WebAssembly and Web Audio support.
 - One or more `.sid` tune files to load locally in the browser.
+
+The module depends on `github.com/dnoegel/zmk-sid`. For local multi-repo
+development, use a Go workspace so changes in a sibling `../zmk-sid` checkout
+are picked up without committing a `replace`:
+
+```sh
+go work init . ../zmk-sid
+```
+
+`go.work` is ignored by Git.
 
 ## Build
 
@@ -29,6 +37,33 @@ The build writes generated/browser assets to `dist/`:
 - `dist/wasm_exec.js` - copied from the local Go toolchain
 
 `dist/` is ignored by Git because these files are generated.
+
+## Release Archive
+
+```sh
+make dist
+```
+
+This builds a browser SDK archive:
+
+```text
+dist/zmk-web-player-snapshot.tar.gz
+dist/zmk-web-player-snapshot.tar.gz.sha256
+```
+
+For a tagged release:
+
+```sh
+make dist VERSION=v0.1.0
+```
+
+The archive contains the files a website needs to serve:
+
+```text
+zmk-sid.js
+zmk-web-player.wasm
+wasm_exec.js
+```
 
 ## Run The Demo
 
@@ -91,6 +126,44 @@ const zmk = await createZmkSid({
 });
 ```
 
+### Capabilities
+
+Use `capabilities()` to detect which runtime features the loaded WASM build
+supports:
+
+```js
+const capabilities = zmk.capabilities();
+
+if (capabilities.features.trace) {
+  console.log("Debug trace support is available");
+}
+```
+
+It is synchronous, cheap, and side-effect free. Playback is always reported when
+the SDK is loaded:
+
+```js
+{
+  apiVersion: 1,
+  runtime: "js/wasm",
+  features: {
+    playback: true,
+    trace: false,
+    snapshot: false,
+    stepFrame: false,
+    stepInstruction: false
+  },
+  limits: {
+    maxChunkFrames: 65536,
+    maxTraceEvents: 65536
+  }
+}
+```
+
+Debug features currently depend on a `zmk-sid` build that exposes the optional
+debug/trace engine API. Older or playback-only builds keep those feature flags
+set to `false`.
+
 ### Play Audio
 
 Use `createAudioPlayer()` when you want the SDK to handle Web Audio scheduling:
@@ -135,17 +208,50 @@ const samples = stream.readChunk(4096); // Int16Array, mono PCM
 stream.stop();
 ```
 
+### Debug Streams
+
+When `zmk.capabilities().features.trace` is true, use `createDebugStream()` for
+learning tools, trace visualizers, and frame stepping:
+
+```js
+const tune = await zmk.loadFile(file);
+const debugStream = tune.createDebugStream({
+  subtune: tune.metadata.defaultSubtune,
+  sampleRate: 44100,
+  traceMask: ["frames", "cpu", "sid.write"],
+  maxTraceEvents: 4096,
+});
+
+const samples = debugStream.readChunk(4096);
+const trace = debugStream.readTrace({ limit: 100 });
+const snapshot = debugStream.snapshot();
+const frame = debugStream.stepFrame();
+
+debugStream.stop();
+```
+
+The debug API is feature-detected. If the loaded WASM build does not support it,
+these methods throw `ZmkSidError` while normal playback continues to work.
+
 ## API
 
 - `createZmkSid({ wasmExecURL, wasmURL })`
+- `zmk.capabilities()`
 - `zmk.loadFile(file)` -> `ZmkSidTune`
 - `zmk.loadBytes(bytes)` -> `ZmkSidTune`
 - `tune.metadata`
 - `tune.supported`
 - `tune.supportError`
 - `tune.createStream({ subtune, sampleRate })`
+- `tune.createDebugStream({ subtune, sampleRate, traceMask, maxTraceEvents })`
 - `stream.readChunk(frames)` -> `Int16Array`
 - `stream.stop()`
+- `debugStream.readChunk(frames)` -> `Int16Array`
+- `debugStream.readTrace({ limit, afterSeq })`
+- `debugStream.snapshot()`
+- `debugStream.stepFrame()`
+- `debugStream.stepInstruction({ maxCycles })`
+- `debugStream.stop()`
 - `tune.createAudioPlayer({ subtune, audioContext, destination, onError })`
 - `player.play()`
 - `player.stop()`
@@ -178,7 +284,14 @@ Metadata includes:
 
 ```sh
 make build          # build WASM, copy wasm_exec.js, copy SDK JS
+make dist           # build a browser SDK archive in dist/
 make serve          # build, then serve the repo root
 make serve PORT=9090
 make clean          # remove generated dist assets
+make tag VERSION=v0.1.0
+make push-tag VERSION=v0.1.0
+make release VERSION=v0.1.0
 ```
+
+Pushing a `v*` tag runs the release workflow, builds the SDK archive, and
+publishes it as a GitHub Release asset.

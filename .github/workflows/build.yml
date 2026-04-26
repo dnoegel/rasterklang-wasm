@@ -1,0 +1,41 @@
+name: Build browser SDK
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build browser SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        run: make test
+
+      - name: Build release archive
+        run: make dist
+
+      - name: Upload browser SDK artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: zmk-web-player-sdk
+          path: |
+            dist/zmk-web-player-snapshot.tar.gz
+            dist/zmk-web-player-snapshot.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 30

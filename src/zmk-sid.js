@@ -3,6 +3,8 @@ const defaultWasmURL = defaultAssetURL("./zmk-web-player.wasm");
 const defaultChunkFrames = 4096;
 const defaultScheduleAheadSeconds = 0.72;
 const defaultScheduleIntervalMs = 75;
+const defaultMaxChunkFrames = 65536;
+const defaultMaxTraceEvents = 65536;
 
 let wasmReady;
 
@@ -50,6 +52,17 @@ export class ZmkSid {
     return this.requireTune().createAudioPlayer(options);
   }
 
+  createDebugStream(options = {}) {
+    return this.requireTune().createDebugStream(options);
+  }
+
+  capabilities() {
+    if (typeof this.api.capabilities !== "function") {
+      return defaultCapabilities();
+    }
+    return normalizeCapabilities(this.api.capabilities());
+  }
+
   requireTune() {
     if (!this.currentTune) {
       throw new ZmkSidError("Load a SID file before creating a stream or player.");
@@ -63,6 +76,25 @@ export class ZmkSid {
     const result = this.api.start(subtune, sampleRate);
     assertOK(result);
     return new ZmkSidStream(this.api, result);
+  }
+
+  startDebugStream(options = {}) {
+    if (typeof this.api.startDebug !== "function") {
+      throw new ZmkSidError("This zmk-web-player build does not support debug streams.");
+    }
+
+    const subtune = numberOrDefault(options.subtune, 0);
+    const sampleRate = numberOrDefault(options.sampleRate, 44100);
+    const traceMask = Array.isArray(options.traceMask) ? options.traceMask : [];
+    const maxTraceEvents = numberOrDefault(options.maxTraceEvents, 0);
+    const result = this.api.startDebug(
+      subtune,
+      sampleRate,
+      traceMask,
+      maxTraceEvents,
+    );
+    assertOK(result);
+    return new ZmkSidDebugStream(this.api, result);
   }
 }
 
@@ -84,6 +116,15 @@ export class ZmkSidTune {
   createAudioPlayer(options = {}) {
     return new ZmkSidAudioPlayer(this, options);
   }
+
+  createDebugStream(options = {}) {
+    return this.client.startDebugStream({
+      subtune: options.subtune ?? this.metadata.defaultSubtune,
+      sampleRate: options.sampleRate,
+      traceMask: options.traceMask,
+      maxTraceEvents: options.maxTraceEvents,
+    });
+  }
 }
 
 export class ZmkSidStream {
@@ -98,14 +139,14 @@ export class ZmkSidStream {
     if (!this.active) {
       throw new ZmkSidError("Cannot read from a stopped SID stream.");
     }
+    return readSampleChunk(this.api, frames);
+  }
 
-    const result = this.api.readChunk(frames);
-    assertOK(result);
-
-    if (!(result.samples instanceof Int16Array)) {
-      throw new ZmkSidError("WASM stream returned an invalid sample buffer.", result);
+  setAudioControls(options = {}) {
+    if (!this.active) {
+      throw new ZmkSidError("Cannot update a stopped SID stream.");
     }
-    return result.samples;
+    return setAudioControls(this.api, options);
   }
 
   stop() {
@@ -116,6 +157,106 @@ export class ZmkSidStream {
     const result = this.api.stop();
     assertOK(result);
     this.active = false;
+  }
+}
+
+export class ZmkSidDebugStream {
+  constructor(api, startResult) {
+    this.api = api;
+    this.subtune = startResult.subtune;
+    this.sampleRate = startResult.sampleRate;
+    this.active = true;
+  }
+
+  readChunk(frames = defaultChunkFrames) {
+    this.requireActive();
+    return readSampleChunk(this.api, frames);
+  }
+
+  setAudioControls(options = {}) {
+    this.requireActive();
+    return setAudioControls(this.api, options);
+  }
+
+  readTrace(options = {}) {
+    this.requireActive();
+    if (typeof this.api.readTrace !== "function") {
+      throw new ZmkSidError("This zmk-web-player build does not support trace reads.");
+    }
+
+    const limit = numberOrDefault(options.limit, 0);
+    const afterSeq = numberOrDefault(options.afterSeq, 0);
+    const result = this.api.readTrace(limit, afterSeq);
+    assertOK(result);
+    return {
+      events: Array.from(result.events || []),
+      dropped: numberOrDefault(result.dropped, 0),
+      nextSeq: numberOrDefault(result.nextSeq, 0),
+    };
+  }
+
+  snapshot() {
+    this.requireActive();
+    if (typeof this.api.snapshot !== "function") {
+      throw new ZmkSidError("This zmk-web-player build does not support snapshots.");
+    }
+
+    const result = this.api.snapshot();
+    assertOK(result);
+    return result.snapshot;
+  }
+
+  stepFrame() {
+    this.requireActive();
+    if (typeof this.api.stepFrame !== "function") {
+      throw new ZmkSidError("This zmk-web-player build does not support frame stepping.");
+    }
+
+    const result = this.api.stepFrame();
+    assertOK(result);
+    if (!(result.samples instanceof Int16Array)) {
+      throw new ZmkSidError("WASM stepFrame returned an invalid sample buffer.", result);
+    }
+    return {
+      samples: result.samples,
+      frames: numberOrDefault(result.frames, result.samples.length),
+      frame: numberOrDefault(result.frame, 0),
+      events: Array.from(result.events || []),
+      snapshot: result.snapshot,
+    };
+  }
+
+  stepInstruction(options = {}) {
+    this.requireActive();
+    if (typeof this.api.stepInstruction !== "function") {
+      throw new ZmkSidError(
+        "This zmk-web-player build does not support instruction stepping.",
+      );
+    }
+
+    const maxCycles = numberOrDefault(options.maxCycles, 0);
+    const result = this.api.stepInstruction(maxCycles);
+    assertOK(result);
+    return {
+      event: result.event,
+      snapshot: result.snapshot,
+    };
+  }
+
+  stop() {
+    if (!this.active) {
+      return;
+    }
+
+    const result = this.api.stop();
+    assertOK(result);
+    this.active = false;
+  }
+
+  requireActive() {
+    if (!this.active) {
+      throw new ZmkSidError("Cannot use a stopped SID debug stream.");
+    }
   }
 }
 
@@ -339,6 +480,84 @@ function normalizeMetadata(metadata) {
     defaultSubtune: metadata.defaultSubtune,
     clock: metadata.clock,
     sidModel: metadata.sidModel,
+  };
+}
+
+function normalizeCapabilities(capabilities) {
+  const fallback = defaultCapabilities();
+  const features = capabilities && capabilities.features ? capabilities.features : {};
+  const limits = capabilities && capabilities.limits ? capabilities.limits : {};
+  return {
+    apiVersion: numberOrDefault(capabilities && capabilities.apiVersion, 1),
+    runtime: (capabilities && capabilities.runtime) || fallback.runtime,
+    features: {
+      playback: features.playback !== false,
+      audioControls: Boolean(features.audioControls),
+      trace: Boolean(features.trace),
+      snapshot: Boolean(features.snapshot),
+      stepFrame: Boolean(features.stepFrame),
+      stepInstruction: Boolean(features.stepInstruction),
+    },
+    limits: {
+      maxChunkFrames: numberOrDefault(limits.maxChunkFrames, defaultMaxChunkFrames),
+      maxTraceEvents: numberOrDefault(limits.maxTraceEvents, defaultMaxTraceEvents),
+    },
+  };
+}
+
+function defaultCapabilities() {
+  return {
+    apiVersion: 1,
+    runtime: "js/wasm",
+    features: {
+      playback: true,
+      audioControls: false,
+      trace: false,
+      snapshot: false,
+      stepFrame: false,
+      stepInstruction: false,
+    },
+    limits: {
+      maxChunkFrames: defaultMaxChunkFrames,
+      maxTraceEvents: defaultMaxTraceEvents,
+    },
+  };
+}
+
+function readSampleChunk(api, frames) {
+  const result = api.readChunk(frames);
+  assertOK(result);
+
+  if (!(result.samples instanceof Int16Array)) {
+    throw new ZmkSidError("WASM stream returned an invalid sample buffer.", result);
+  }
+  return result.samples;
+}
+
+function setAudioControls(api, options = {}) {
+  if (typeof api.setAudioControls !== "function") {
+    throw new ZmkSidError("This zmk-web-player build does not support audio controls.");
+  }
+  const result = api.setAudioControls(normalizeAudioControlOptions(options));
+  assertOK(result);
+  return normalizeAudioControls(result.audioControls || options);
+}
+
+function normalizeAudioControlOptions(options = {}) {
+  const filterBypass = Object.prototype.hasOwnProperty.call(options, "filterBypass")
+    ? Boolean(options.filterBypass)
+    : options.filterEnabled === false;
+  return {
+    voiceMask: numberOrDefault(options.voiceMask, 0x07) & 0x07,
+    filterBypass,
+  };
+}
+
+function normalizeAudioControls(value = {}) {
+  return {
+    voiceMask: numberOrDefault(value.voiceMask, 0x07) & 0x07,
+    filterBypass: Boolean(value.filterBypass),
+    filterEnabled: value.filterEnabled !== false && !value.filterBypass,
   };
 }
 
