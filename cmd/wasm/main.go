@@ -198,7 +198,7 @@ func startDebugStream(_ js.Value, args []js.Value) any {
 	}
 
 	mask := sid.TraceFrames | sid.TraceCPUSteps | sid.TraceSIDWrites
-	if len(args) >= 3 && args[2].Truthy() && args[2].Length() > 0 {
+	if len(args) >= 3 && args[2].Truthy() {
 		mask = traceMaskFromJS(args[2])
 	}
 
