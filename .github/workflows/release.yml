@@ -41,5 +41,5 @@ jobs:
           else
             gh release create "${TAG}" dist/*.tar.gz dist/*.sha256 \
               --title "${TAG}" \
-              --notes "zmk-web-player ${TAG}"
+              --notes "rasterklang-wasm ${TAG}"
           fi

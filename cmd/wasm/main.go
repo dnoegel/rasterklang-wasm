@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"syscall/js"
 
-	sid "github.com/dnoegel/zmk-sid"
+	sid "github.com/dnoegel/rasterklang"
 )
 
 var (
@@ -27,6 +27,8 @@ func main() {
 	register(api, "load", loadSID)
 	register(api, "start", startStream)
 	register(api, "readChunk", readChunk)
+	register(api, "skipSamples", skipSamples)
+	register(api, "fastForwardSamples", fastForwardSamples)
 	register(api, "startDebug", startDebugStream)
 	register(api, "readTrace", readTrace)
 	register(api, "snapshot", snapshot)
@@ -35,7 +37,7 @@ func main() {
 	register(api, "stepInstruction", stepInstruction)
 	register(api, "stop", stopStream)
 	api.Set("runtime", fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH))
-	js.Global().Set("zmkSid", api)
+	js.Global().Set("rasterklangWasm", api)
 
 	select {}
 }
@@ -53,6 +55,8 @@ func capabilities(_ js.Value, _ []js.Value) any {
 		"features": object(map[string]any{
 			"playback":        true,
 			"audioControls":   true,
+			"skipSamples":     true,
+			"fastForward":     true,
 			"trace":           true,
 			"snapshot":        true,
 			"stepFrame":       true,
@@ -179,6 +183,52 @@ func readChunk(_ js.Value, args []js.Value) any {
 	return success(map[string]any{
 		"frames":  len(samples),
 		"samples": int16Array(samples),
+	})
+}
+
+func skipSamples(_ js.Value, args []js.Value) any {
+	return advanceSamples(args, false)
+}
+
+func fastForwardSamples(_ js.Value, args []js.Value) any {
+	return advanceSamples(args, true)
+}
+
+func advanceSamples(args []js.Value, fast bool) any {
+	if currentStream == nil && currentDebug == nil {
+		return failure(errors.New("start playback first"))
+	}
+
+	frames := 0
+	if len(args) >= 1 {
+		frames = args[0].Int()
+	}
+	if frames < 0 || frames > maxChunkFrames {
+		return failure(fmt.Errorf("skip frame count must be between 0 and %d", maxChunkFrames))
+	}
+	var err error
+	if currentDebug != nil {
+		if fast {
+			err = currentDebug.FastForwardSamples(frames)
+		} else {
+			err = currentDebug.SkipSamples(frames)
+		}
+		if err != nil {
+			return failure(err)
+		}
+	} else {
+		if fast {
+			err = currentStream.FastForwardSamples(frames)
+		} else {
+			err = currentStream.SkipSamples(frames)
+		}
+		if err != nil {
+			return failure(err)
+		}
+	}
+
+	return success(map[string]any{
+		"frames": frames,
 	})
 }
 

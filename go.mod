@@ -1,7 +1,6 @@
-module github.com/dnoegel/zmk-web-player
+module github.com/dnoegel/rasterklang-wasm
 
 go 1.26
 
-require github.com/dnoegel/zmk-sid v0.1.0
+require github.com/dnoegel/rasterklang v0.1.0
 
-replace github.com/dnoegel/zmk-sid => ../zmk-sid

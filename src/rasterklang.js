@@ -1,5 +1,5 @@
 const defaultWasmExecURL = defaultAssetURL("./wasm_exec.js");
-const defaultWasmURL = defaultAssetURL("./zmk-web-player.wasm");
+const defaultWasmURL = defaultAssetURL("./rasterklang.wasm");
 const defaultChunkFrames = 4096;
 const defaultScheduleAheadSeconds = 0.72;
 const defaultScheduleIntervalMs = 75;
@@ -8,20 +8,20 @@ const defaultMaxTraceEvents = 65536;
 
 let wasmReady;
 
-export async function createZmkSid(options = {}) {
+export async function createRasterklang(options = {}) {
   const api = await loadWasm(options);
-  return new ZmkSid(api);
+  return new Rasterklang(api);
 }
 
-export class ZmkSidError extends Error {
+export class RasterklangError extends Error {
   constructor(message, response = null) {
     super(message);
-    this.name = "ZmkSidError";
+    this.name = "RasterklangError";
     this.response = response;
   }
 }
 
-export class ZmkSid {
+export class Rasterklang {
   constructor(api) {
     this.api = api;
     this.runtime = api.runtime || "";
@@ -32,14 +32,14 @@ export class ZmkSid {
     const result = this.api.load(toUint8Array(bytes));
     assertOK(result);
 
-    const tune = new ZmkSidTune(this, result);
+    const tune = new RasterklangTune(this, result);
     this.currentTune = tune;
     return tune;
   }
 
   async loadFile(file) {
     if (!file || typeof file.arrayBuffer !== "function") {
-      throw new ZmkSidError("loadFile expects a browser File or Blob.");
+      throw new RasterklangError("loadFile expects a browser File or Blob.");
     }
     return this.loadBytes(new Uint8Array(await file.arrayBuffer()));
   }
@@ -65,7 +65,7 @@ export class ZmkSid {
 
   requireTune() {
     if (!this.currentTune) {
-      throw new ZmkSidError("Load a SID file before creating a stream or player.");
+      throw new RasterklangError("Load a SID file before creating a stream or player.");
     }
     return this.currentTune;
   }
@@ -75,12 +75,12 @@ export class ZmkSid {
     const sampleRate = numberOrDefault(options.sampleRate, 44100);
     const result = this.api.start(subtune, sampleRate);
     assertOK(result);
-    return new ZmkSidStream(this.api, result);
+    return new RasterklangStream(this.api, result);
   }
 
   startDebugStream(options = {}) {
     if (typeof this.api.startDebug !== "function") {
-      throw new ZmkSidError("This zmk-web-player build does not support debug streams.");
+      throw new RasterklangError("This rasterklang-wasm build does not support debug streams.");
     }
 
     const subtune = numberOrDefault(options.subtune, 0);
@@ -94,11 +94,11 @@ export class ZmkSid {
       maxTraceEvents,
     );
     assertOK(result);
-    return new ZmkSidDebugStream(this.api, result);
+    return new RasterklangDebugStream(this.api, result);
   }
 }
 
-export class ZmkSidTune {
+export class RasterklangTune {
   constructor(client, result) {
     this.client = client;
     this.metadata = normalizeMetadata(result.metadata);
@@ -114,7 +114,7 @@ export class ZmkSidTune {
   }
 
   createAudioPlayer(options = {}) {
-    return new ZmkSidAudioPlayer(this, options);
+    return new RasterklangAudioPlayer(this, options);
   }
 
   createDebugStream(options = {}) {
@@ -127,7 +127,7 @@ export class ZmkSidTune {
   }
 }
 
-export class ZmkSidStream {
+export class RasterklangStream {
   constructor(api, startResult) {
     this.api = api;
     this.subtune = startResult.subtune;
@@ -137,14 +137,28 @@ export class ZmkSidStream {
 
   readChunk(frames = defaultChunkFrames) {
     if (!this.active) {
-      throw new ZmkSidError("Cannot read from a stopped SID stream.");
+      throw new RasterklangError("Cannot read from a stopped SID stream.");
     }
     return readSampleChunk(this.api, frames);
   }
 
+  skipSamples(frames = defaultChunkFrames) {
+    if (!this.active) {
+      throw new RasterklangError("Cannot skip a stopped SID stream.");
+    }
+    return skipSampleChunk(this.api, frames);
+  }
+
+  fastForwardSamples(frames = defaultChunkFrames) {
+    if (!this.active) {
+      throw new RasterklangError("Cannot fast-forward a stopped SID stream.");
+    }
+    return fastForwardSampleChunk(this.api, frames);
+  }
+
   setAudioControls(options = {}) {
     if (!this.active) {
-      throw new ZmkSidError("Cannot update a stopped SID stream.");
+      throw new RasterklangError("Cannot update a stopped SID stream.");
     }
     return setAudioControls(this.api, options);
   }
@@ -160,7 +174,7 @@ export class ZmkSidStream {
   }
 }
 
-export class ZmkSidDebugStream {
+export class RasterklangDebugStream {
   constructor(api, startResult) {
     this.api = api;
     this.subtune = startResult.subtune;
@@ -173,6 +187,16 @@ export class ZmkSidDebugStream {
     return readSampleChunk(this.api, frames);
   }
 
+  skipSamples(frames = defaultChunkFrames) {
+    this.requireActive();
+    return skipSampleChunk(this.api, frames);
+  }
+
+  fastForwardSamples(frames = defaultChunkFrames) {
+    this.requireActive();
+    return fastForwardSampleChunk(this.api, frames);
+  }
+
   setAudioControls(options = {}) {
     this.requireActive();
     return setAudioControls(this.api, options);
@@ -181,7 +205,7 @@ export class ZmkSidDebugStream {
   readTrace(options = {}) {
     this.requireActive();
     if (typeof this.api.readTrace !== "function") {
-      throw new ZmkSidError("This zmk-web-player build does not support trace reads.");
+      throw new RasterklangError("This rasterklang-wasm build does not support trace reads.");
     }
 
     const limit = numberOrDefault(options.limit, 0);
@@ -198,7 +222,7 @@ export class ZmkSidDebugStream {
   snapshot() {
     this.requireActive();
     if (typeof this.api.snapshot !== "function") {
-      throw new ZmkSidError("This zmk-web-player build does not support snapshots.");
+      throw new RasterklangError("This rasterklang-wasm build does not support snapshots.");
     }
 
     const result = this.api.snapshot();
@@ -209,13 +233,13 @@ export class ZmkSidDebugStream {
   stepFrame() {
     this.requireActive();
     if (typeof this.api.stepFrame !== "function") {
-      throw new ZmkSidError("This zmk-web-player build does not support frame stepping.");
+      throw new RasterklangError("This rasterklang-wasm build does not support frame stepping.");
     }
 
     const result = this.api.stepFrame();
     assertOK(result);
     if (!(result.samples instanceof Int16Array)) {
-      throw new ZmkSidError("WASM stepFrame returned an invalid sample buffer.", result);
+      throw new RasterklangError("WASM stepFrame returned an invalid sample buffer.", result);
     }
     return {
       samples: result.samples,
@@ -229,8 +253,8 @@ export class ZmkSidDebugStream {
   stepInstruction(options = {}) {
     this.requireActive();
     if (typeof this.api.stepInstruction !== "function") {
-      throw new ZmkSidError(
-        "This zmk-web-player build does not support instruction stepping.",
+      throw new RasterklangError(
+        "This rasterklang-wasm build does not support instruction stepping.",
       );
     }
 
@@ -255,12 +279,12 @@ export class ZmkSidDebugStream {
 
   requireActive() {
     if (!this.active) {
-      throw new ZmkSidError("Cannot use a stopped SID debug stream.");
+      throw new RasterklangError("Cannot use a stopped SID debug stream.");
     }
   }
 }
 
-export class ZmkSidAudioPlayer {
+export class RasterklangAudioPlayer {
   constructor(tune, options = {}) {
     this.tune = tune;
     this.audioContext = options.audioContext || null;
@@ -349,7 +373,7 @@ export class ZmkSidAudioPlayer {
       ) {
         const samples = this.stream.readChunk(this.chunkFrames);
         if (!samples.length) {
-          throw new ZmkSidError("The SID stream returned no samples.");
+          throw new RasterklangError("The SID stream returned no samples.");
         }
 
         const buffer = int16ToAudioBuffer(
@@ -396,8 +420,8 @@ function int16ToAudioBuffer(audioContext, samples, sampleRate) {
 }
 
 async function loadWasm(options) {
-  if (globalThis.zmkSid) {
-    return globalThis.zmkSid;
+  if (globalThis.rasterklangWasm) {
+    return globalThis.rasterklangWasm;
   }
   if (wasmReady) {
     return wasmReady;
@@ -411,13 +435,13 @@ async function loadWasm(options) {
       await loadScript(wasmExecURL);
     }
     if (!globalThis.Go) {
-      throw new ZmkSidError("wasm_exec.js loaded, but Go was not registered.");
+      throw new RasterklangError("wasm_exec.js loaded, but Go was not registered.");
     }
 
     const go = new globalThis.Go();
     const response = await fetch(wasmURL);
     if (!response.ok) {
-      throw new ZmkSidError(`Could not load ${wasmURL}: ${response.status}`);
+      throw new RasterklangError(`Could not load ${wasmURL}: ${response.status}`);
     }
 
     const bytes = await response.arrayBuffer();
@@ -425,10 +449,10 @@ async function loadWasm(options) {
     go.run(result.instance);
     await Promise.resolve();
 
-    if (!globalThis.zmkSid) {
-      throw new ZmkSidError("WASM loaded, but the zmkSid API was not registered.");
+    if (!globalThis.rasterklangWasm) {
+      throw new RasterklangError("WASM loaded, but the rasterklangWasm API was not registered.");
     }
-    return globalThis.zmkSid;
+    return globalThis.rasterklangWasm;
   })();
 
   return wasmReady;
@@ -451,7 +475,7 @@ function loadScript(src) {
     script.async = true;
     script.onload = resolve;
     script.onerror = () =>
-      reject(new ZmkSidError(`Could not load wasm_exec.js from ${src}.`));
+      reject(new RasterklangError(`Could not load wasm_exec.js from ${src}.`));
     document.head.append(script);
   });
 }
@@ -466,7 +490,7 @@ function toUint8Array(bytes) {
   if (ArrayBuffer.isView(bytes)) {
     return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   }
-  throw new ZmkSidError("loadBytes expects a Uint8Array, ArrayBuffer, or view.");
+  throw new RasterklangError("loadBytes expects a Uint8Array, ArrayBuffer, or view.");
 }
 
 function normalizeMetadata(metadata) {
@@ -493,6 +517,8 @@ function normalizeCapabilities(capabilities) {
     features: {
       playback: features.playback !== false,
       audioControls: Boolean(features.audioControls),
+      skipSamples: Boolean(features.skipSamples),
+      fastForward: Boolean(features.fastForward),
       trace: Boolean(features.trace),
       snapshot: Boolean(features.snapshot),
       stepFrame: Boolean(features.stepFrame),
@@ -512,6 +538,8 @@ function defaultCapabilities() {
     features: {
       playback: true,
       audioControls: false,
+      skipSamples: false,
+      fastForward: false,
       trace: false,
       snapshot: false,
       stepFrame: false,
@@ -529,14 +557,32 @@ function readSampleChunk(api, frames) {
   assertOK(result);
 
   if (!(result.samples instanceof Int16Array)) {
-    throw new ZmkSidError("WASM stream returned an invalid sample buffer.", result);
+    throw new RasterklangError("WASM stream returned an invalid sample buffer.", result);
   }
   return result.samples;
 }
 
+function skipSampleChunk(api, frames) {
+  if (typeof api.skipSamples !== "function") {
+    return readSampleChunk(api, frames).length;
+  }
+  const result = api.skipSamples(frames);
+  assertOK(result);
+  return numberOrDefault(result.frames, frames);
+}
+
+function fastForwardSampleChunk(api, frames) {
+  if (typeof api.fastForwardSamples !== "function") {
+    return skipSampleChunk(api, frames);
+  }
+  const result = api.fastForwardSamples(frames);
+  assertOK(result);
+  return numberOrDefault(result.frames, frames);
+}
+
 function setAudioControls(api, options = {}) {
   if (typeof api.setAudioControls !== "function") {
-    throw new ZmkSidError("This zmk-web-player build does not support audio controls.");
+    throw new RasterklangError("This rasterklang-wasm build does not support audio controls.");
   }
   const result = api.setAudioControls(normalizeAudioControlOptions(options));
   assertOK(result);
@@ -567,8 +613,8 @@ function numberOrDefault(value, fallback) {
 
 function assertOK(result) {
   if (!result || !result.ok) {
-    throw new ZmkSidError(
-      result && result.error ? result.error : "zmk-web-player failed.",
+    throw new RasterklangError(
+      result && result.error ? result.error : "rasterklang-wasm failed.",
       result,
     );
   }
@@ -577,7 +623,7 @@ function assertOK(result) {
 function createAudioContext() {
   const AudioContext = window.AudioContext || window.webkitAudioContext;
   if (!AudioContext) {
-    throw new ZmkSidError("This browser does not support Web Audio.");
+    throw new RasterklangError("This browser does not support Web Audio.");
   }
   return new AudioContext();
 }

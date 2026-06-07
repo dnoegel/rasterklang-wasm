@@ -1,4 +1,4 @@
-import { createZmkSid } from "../dist/zmk-sid.js";
+import { createRasterklang } from "../dist/rasterklang.js";
 
 const dom = {
   runtimeState: document.querySelector("#runtimeState"),
@@ -82,7 +82,7 @@ window.addEventListener("beforeunload", () => stopPlayback({ updateStatus: false
 async function boot() {
   try {
     setRuntime("loading", "WASM loading");
-    state.sdk = await createZmkSid();
+    state.sdk = await createRasterklang();
     state.wasmReady = true;
     setRuntime("ready", "SDK ready");
     setStatus("Load a SID file to begin.", "ok");

@@ -1,13 +1,13 @@
 SHELL := /bin/sh
 
-PACKAGE := zmk-web-player
+PACKAGE := rasterklang-wasm
 GO ?= go
 PORT ?= 8080
 DIST := dist
 DIST_STAMP := $(DIST)/.dir
-WASM := $(DIST)/$(PACKAGE).wasm
+WASM := $(DIST)/rasterklang.wasm
 WASM_EXEC := $(DIST)/wasm_exec.js
-SDK := $(DIST)/zmk-sid.js
+SDK := $(DIST)/rasterklang.js
 VERSION ?=
 ARCHIVE_VERSION := $(if $(VERSION),$(VERSION),snapshot)
 ARCHIVE := $(DIST)/$(PACKAGE)-$(ARCHIVE_VERSION).tar.gz
@@ -27,13 +27,13 @@ help:
 		'  make release VERSION=v0.1.0       Create and push a release tag'
 
 test:
-	node --check src/zmk-sid.js
+	node --check src/rasterklang.js
 	node --check demo/app.js
 	GOOS=js GOARCH=wasm $(GO) test ./...
 
 build: | $(DIST_STAMP)
 	cp "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" "$(WASM_EXEC)"
-	cp "src/zmk-sid.js" "$(SDK)"
+	cp "src/rasterklang.js" "$(SDK)"
 	GOOS=js GOARCH=wasm $(GO) build -trimpath -o "$(WASM)" ./cmd/wasm
 
 dist: clean build

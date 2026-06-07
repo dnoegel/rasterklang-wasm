@@ -1,9 +1,9 @@
-# zmk-web-player
+# rasterklang-wasm
 
 Browser SDK for playing Commodore 64 SID tunes in web apps, powered by
-`zmk-sid`, Go WebAssembly, and the Web Audio API.
+`rasterklang`, Go WebAssembly, and the Web Audio API.
 
-`zmk-web-player` is intentionally UI-free at the integration layer. It gives web apps a
+`rasterklang-wasm` is intentionally UI-free at the integration layer. It gives web apps a
 small JavaScript API for loading `.sid` tune files, reading PSID/RSID metadata,
 rendering SID audio as PCM chunks, and playing those tunes in the browser. The
 included page is only a demo consumer of that SDK.
@@ -14,12 +14,12 @@ included page is only a demo consumer of that SDK.
 - A browser with WebAssembly and Web Audio support.
 - One or more `.sid` tune files to load locally in the browser.
 
-The module depends on `github.com/dnoegel/zmk-sid`. For local multi-repo
-development, use a Go workspace so changes in a sibling `../zmk-sid` checkout
+The module depends on `github.com/dnoegel/rasterklang`. For local multi-repo
+development, use a Go workspace so changes in a sibling `../rasterklang` checkout
 are picked up without committing a `replace`:
 
 ```sh
-go work init . ../zmk-sid
+go work init . ../rasterklang
 ```
 
 `go.work` is ignored by Git.
@@ -32,8 +32,8 @@ make build
 
 The build writes generated/browser assets to `dist/`:
 
-- `dist/zmk-sid.js` - public browser SDK
-- `dist/zmk-web-player.wasm` - compiled Go SID bridge
+- `dist/rasterklang.js` - public browser SDK
+- `dist/rasterklang.wasm` - compiled Go SID bridge
 - `dist/wasm_exec.js` - copied from the local Go toolchain
 
 `dist/` is ignored by Git because these files are generated.
@@ -47,8 +47,8 @@ make dist
 This builds a browser SDK archive:
 
 ```text
-dist/zmk-web-player-snapshot.tar.gz
-dist/zmk-web-player-snapshot.tar.gz.sha256
+dist/rasterklang-wasm-snapshot.tar.gz
+dist/rasterklang-wasm-snapshot.tar.gz.sha256
 ```
 
 For a tagged release:
@@ -60,8 +60,8 @@ make dist VERSION=v0.1.0
 The archive contains the files a website needs to serve:
 
 ```text
-zmk-sid.js
-zmk-web-player.wasm
+rasterklang.js
+rasterklang.wasm
 wasm_exec.js
 ```
 
@@ -94,8 +94,8 @@ button click.
 Copy or serve these files together from the website that should play SID tunes:
 
 ```text
-dist/zmk-sid.js
-dist/zmk-web-player.wasm
+dist/rasterklang.js
+dist/rasterklang.wasm
 dist/wasm_exec.js
 ```
 
@@ -103,26 +103,26 @@ Import the SDK from your page and load a SID tune from a browser `File`:
 
 ```html
 <script type="module">
-  import { createZmkSid } from "./dist/zmk-sid.js";
+  import { createRasterklang } from "./dist/rasterklang.js";
 
-  const zmk = await createZmkSid();
+  const rk = await createRasterklang();
 
   document.querySelector("input[type=file]").addEventListener("change", async (event) => {
     const file = event.target.files[0];
-    const tune = await zmk.loadFile(file);
+    const tune = await rk.loadFile(file);
 
     console.log(tune.metadata);
   });
 </script>
 ```
 
-By default, `zmk-sid.js` loads `wasm_exec.js` and `zmk-web-player.wasm` from the same
+By default, `rasterklang.js` loads `wasm_exec.js` and `rasterklang.wasm` from the same
 directory as itself. If you serve those files elsewhere, pass explicit URLs:
 
 ```js
-const zmk = await createZmkSid({
-  wasmExecURL: "/assets/zmk/wasm_exec.js",
-  wasmURL: "/assets/zmk/zmk-web-player.wasm",
+const rk = await createRasterklang({
+  wasmExecURL: "/assets/rk/wasm_exec.js",
+  wasmURL: "/assets/rk/rasterklang.wasm",
 });
 ```
 
@@ -132,7 +132,7 @@ Use `capabilities()` to detect which runtime features the loaded WASM build
 supports:
 
 ```js
-const capabilities = zmk.capabilities();
+const capabilities = rk.capabilities();
 
 if (capabilities.features.trace) {
   console.log("Debug trace support is available");
@@ -160,7 +160,7 @@ the SDK is loaded:
 }
 ```
 
-Debug features currently depend on a `zmk-sid` build that exposes the optional
+Debug features currently depend on a `rasterklang` build that exposes the optional
 debug/trace engine API. Older or playback-only builds keep those feature flags
 set to `false`.
 
@@ -172,7 +172,7 @@ Use `createAudioPlayer()` when you want the SDK to handle Web Audio scheduling:
 let player;
 
 playButton.addEventListener("click", async () => {
-  const tune = await zmk.loadFile(fileInput.files[0]);
+  const tune = await rk.loadFile(fileInput.files[0]);
 
   player = tune.createAudioPlayer({
     subtune: tune.metadata.defaultSubtune,
@@ -198,7 +198,7 @@ Use `createStream()` when your app wants to own audio scheduling, visualization,
 export, buffering, or analysis:
 
 ```js
-const tune = await zmk.loadFile(file);
+const tune = await rk.loadFile(file);
 const stream = tune.createStream({
   subtune: 1,
   sampleRate: 44100,
@@ -210,11 +210,11 @@ stream.stop();
 
 ### Debug Streams
 
-When `zmk.capabilities().features.trace` is true, use `createDebugStream()` for
+When `rk.capabilities().features.trace` is true, use `createDebugStream()` for
 learning tools, trace visualizers, and frame stepping:
 
 ```js
-const tune = await zmk.loadFile(file);
+const tune = await rk.loadFile(file);
 const debugStream = tune.createDebugStream({
   subtune: tune.metadata.defaultSubtune,
   sampleRate: 44100,
@@ -231,14 +231,14 @@ debugStream.stop();
 ```
 
 The debug API is feature-detected. If the loaded WASM build does not support it,
-these methods throw `ZmkSidError` while normal playback continues to work.
+these methods throw `RasterklangError` while normal playback continues to work.
 
 ## API
 
-- `createZmkSid({ wasmExecURL, wasmURL })`
-- `zmk.capabilities()`
-- `zmk.loadFile(file)` -> `ZmkSidTune`
-- `zmk.loadBytes(bytes)` -> `ZmkSidTune`
+- `createRasterklang({ wasmExecURL, wasmURL })`
+- `rk.capabilities()`
+- `rk.loadFile(file)` -> `RasterklangTune`
+- `rk.loadBytes(bytes)` -> `RasterklangTune`
 - `tune.metadata`
 - `tune.supported`
 - `tune.supportError`
@@ -276,7 +276,7 @@ Metadata includes:
   smoother.
 - There is no seeking, looping, built-in volume control, waveform display, or
   playlist management yet.
-- Unsupported tunes surface the same POC engine limits as `zmk-sid`.
+- Unsupported tunes surface the same POC engine limits as `rasterklang`.
 - SID files do not carry reliable song lengths, so playback is open-ended until
   stopped.
 

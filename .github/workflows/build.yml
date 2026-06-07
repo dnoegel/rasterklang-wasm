@@ -33,9 +33,9 @@ jobs:
       - name: Upload browser SDK artifact
         uses: actions/upload-artifact@v6
         with:
-          name: zmk-web-player-sdk
+          name: rasterklang-wasm-sdk
           path: |
-            dist/zmk-web-player-snapshot.tar.gz
-            dist/zmk-web-player-snapshot.tar.gz.sha256
+            dist/rasterklang-wasm-snapshot.tar.gz
+            dist/rasterklang-wasm-snapshot.tar.gz.sha256
           if-no-files-found: error
           retention-days: 30
