@@ -260,7 +260,7 @@ func startDebugStream(_ js.Value, args []js.Value) any {
 		sampleRate = args[1].Int()
 	}
 
-	mask := sid.TraceFrames | sid.TraceCPUSteps | sid.TraceSIDWrites
+	mask := defaultTraceMask()
 	if len(args) >= 3 && args[2].Truthy() {
 		mask = traceMaskFromJS(args[2])
 	}
@@ -424,6 +424,10 @@ func int16Array(samples []int16) js.Value {
 }
 
 func traceMaskFromJS(values js.Value) sid.TraceMask {
+	if values.Length() == 0 {
+		return defaultTraceMask()
+	}
+
 	mask := sid.TraceMask(0)
 	for i := 0; i < values.Length(); i++ {
 		switch values.Index(i).String() {
@@ -444,6 +448,10 @@ func traceMaskFromJS(values js.Value) sid.TraceMask {
 		}
 	}
 	return mask
+}
+
+func defaultTraceMask() sid.TraceMask {
+	return sid.TraceFrames | sid.TraceCPUSteps | sid.TraceSIDWrites
 }
 
 func currentAudioControls() sid.AudioControls {

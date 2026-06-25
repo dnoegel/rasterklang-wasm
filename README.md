@@ -176,6 +176,10 @@ the embedding app explicitly uploads them.
 `dist/`, serves the SDK through a local HTTP server with `application/wasm`, and
 drives headless Chrome through the DevTools Protocol.
 
+The same gates run Go package tests under `GOOS=js GOARCH=wasm` through the Go
+toolchain's `go_js_wasm_exec` runner, so bridge helpers are tested inside the
+same JavaScript/WebAssembly runtime shape that executes the SDK.
+
 The smoke uses a synthetic PSID generated inside the test, not an HVSC tune. It
 loads the SDK, verifies metadata parsing, starts a PCM stream, checks non-zero
 samples, exercises audio controls, and verifies debug stream APIs including

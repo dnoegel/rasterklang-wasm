@@ -2,6 +2,7 @@ SHELL := /bin/sh
 
 PACKAGE := rasterklang-wasm
 GO ?= go
+GO_WASM_EXEC ?= $(shell $(GO) env GOROOT)/lib/wasm/go_js_wasm_exec
 PORT ?= 8080
 DIST := dist
 DIST_STAMP := $(DIST)/.dir
@@ -49,7 +50,7 @@ test:
 	node --check scripts/test-browser-sdk.mjs
 	node scripts/test-sdk-release-info.mjs
 	node scripts/test-browser-sdk.mjs
-	GOOS=js GOARCH=wasm $(GO) test ./...
+	GOOS=js GOARCH=wasm $(GO) test -exec="$(GO_WASM_EXEC)" ./...
 
 check:
 	@fmt="$$(gofmt -l .)"; \
@@ -75,7 +76,7 @@ check:
 	$(MAKE) release-provenance
 	node scripts/test-browser-sdk.mjs
 	GOOS=js GOARCH=wasm $(GO) vet ./...
-	GOOS=js GOARCH=wasm $(GO) test ./...
+	GOOS=js GOARCH=wasm $(GO) test -exec="$(GO_WASM_EXEC)" ./...
 
 npm-pack: dist
 	npm pack --dry-run

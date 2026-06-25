@@ -11,6 +11,10 @@ Run the full release gate before sending changes:
 make check
 ```
 
+`make check` runs Go package tests under `GOOS=js GOARCH=wasm` through the Go
+toolchain's `go_js_wasm_exec` runner. If you need to override the runner path,
+set `GO_WASM_EXEC=/path/to/go_js_wasm_exec`.
+
 For package/archive changes, run the package contract directly as well:
 
 ```sh
