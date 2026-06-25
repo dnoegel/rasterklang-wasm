@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -23,13 +24,26 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+
       - name: Run tests
-        run: make test
+        run: make check
 
       - name: Build release archive
         env:
           VERSION: ${{ github.ref_name }}
         run: make dist VERSION="${VERSION}"
+
+      - name: Verify npm package
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          node scripts/check-package-version.mjs --version "${VERSION}"
+          npm pack --dry-run
 
       - name: Publish GitHub Release
         env:
@@ -43,3 +57,13 @@ jobs:
               --title "${TAG}" \
               --notes "rasterklang-wasm ${TAG}"
           fi
+
+      - name: Publish npm package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "NPM_TOKEN is not set; skipping npm publish."
+            exit 0
+          fi
+          npm publish --provenance --access public

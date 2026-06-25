@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"syscall/js"
 
-	sid "github.com/dnoegel/rasterklang"
+	sid "github.com/dnoegel/rasterklang-cli"
 )
 
 var (
@@ -14,6 +14,9 @@ var (
 	currentStream *sid.Stream
 	currentDebug  *sid.DebugStream
 	callbacks     []js.Func
+	version       = "dev"
+	commit        = "unknown"
+	date          = "unknown"
 )
 
 const (
@@ -24,6 +27,7 @@ const (
 func main() {
 	api := js.Global().Get("Object").New()
 	register(api, "capabilities", capabilities)
+	register(api, "releaseInfo", releaseInfo)
 	register(api, "load", loadSID)
 	register(api, "start", startStream)
 	register(api, "readChunk", readChunk)
@@ -66,6 +70,15 @@ func capabilities(_ js.Value, _ []js.Value) any {
 			"maxChunkFrames": maxChunkFrames,
 			"maxTraceEvents": maxTraceEvents,
 		}),
+	})
+}
+
+func releaseInfo(_ js.Value, _ []js.Value) any {
+	return object(map[string]any{
+		"version": version,
+		"commit":  commit,
+		"date":    date,
+		"runtime": fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
 	})
 }
 

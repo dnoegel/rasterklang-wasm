@@ -1,0 +1,48 @@
+{
+  "name": "rasterklang-wasm",
+  "version": "0.1.0",
+  "description": "Browser SDK for playing Commodore 64 SID tunes with Rasterklang WebAssembly.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dnoegel/rasterklang-wasm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dnoegel/rasterklang-wasm/issues"
+  },
+  "homepage": "https://github.com/dnoegel/rasterklang-wasm#readme",
+  "keywords": [
+    "sid",
+    "wasm",
+    "commodore-64",
+    "c64",
+    "audio"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/rasterklang.d.ts",
+      "import": "./dist/rasterklang.js"
+    }
+  },
+  "files": [
+    "dist/rasterklang.js",
+    "dist/rasterklang.d.ts",
+    "dist/rasterklang.wasm",
+    "dist/wasm_exec.js",
+    "dist/THIRD_PARTY_LICENSE_REPORT.md",
+    "dist/RELEASE_PROVENANCE.json",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "README.md",
+    "LICENSE",
+    "SECURITY.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "make build",
+    "dist": "make dist",
+    "check": "make check"
+  }
+}

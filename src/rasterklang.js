@@ -63,6 +63,13 @@ export class Rasterklang {
     return normalizeCapabilities(this.api.capabilities());
   }
 
+  releaseInfo() {
+    if (typeof this.api.releaseInfo !== "function") {
+      return defaultReleaseInfo(this.runtime);
+    }
+    return normalizeReleaseInfo(this.api.releaseInfo(), this.runtime);
+  }
+
   requireTune() {
     if (!this.currentTune) {
       throw new RasterklangError("Load a SID file before creating a stream or player.");
@@ -531,6 +538,25 @@ function normalizeCapabilities(capabilities) {
   };
 }
 
+function normalizeReleaseInfo(info, runtime) {
+  const fallback = defaultReleaseInfo(runtime);
+  return {
+    version: stringOrDefault(info && info.version, fallback.version),
+    commit: stringOrDefault(info && info.commit, fallback.commit),
+    date: stringOrDefault(info && info.date, fallback.date),
+    runtime: stringOrDefault(info && info.runtime, fallback.runtime),
+  };
+}
+
+function defaultReleaseInfo(runtime = "") {
+  return {
+    version: "dev",
+    commit: "unknown",
+    date: "unknown",
+    runtime: runtime || "js/wasm",
+  };
+}
+
 function defaultCapabilities() {
   return {
     apiVersion: 1,
@@ -609,6 +635,10 @@ function normalizeAudioControls(value = {}) {
 
 function numberOrDefault(value, fallback) {
   return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
+
+function stringOrDefault(value, fallback) {
+  return typeof value === "string" && value ? value : fallback;
 }
 
 function assertOK(result) {
