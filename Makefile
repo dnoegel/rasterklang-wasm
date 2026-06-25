@@ -17,7 +17,7 @@ SDK_TYPES := $(DIST)/rasterklang.d.ts
 VERSION ?=
 BUILD_VERSION ?= $(if $(VERSION),$(VERSION),$(shell git describe --tags --dirty --always 2>/dev/null || echo dev))
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
-DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+DATE ?= $(shell git log -1 --format=%cI 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
 ARCHIVE_VERSION := $(if $(VERSION),$(VERSION),snapshot)
 ARCHIVE := $(DIST)/$(PACKAGE)-$(ARCHIVE_VERSION).tar.gz
 ARCHIVE_STAGE := $(DIST)/$(PACKAGE)-$(ARCHIVE_VERSION)

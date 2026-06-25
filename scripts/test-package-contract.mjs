@@ -11,6 +11,7 @@ const readme = readFileSync("README.md", "utf8");
 const goMod = readFileSync("go.mod", "utf8");
 const sdkTypes = readFileSync("types/rasterklang.d.ts", "utf8");
 const releaseWorkflow = readFileSync(".github/workflows/release.yml", "utf8");
+const makefile = readFileSync("Makefile", "utf8");
 assert.equal(pkg.name, "rasterklang-wasm");
 assert.equal(pkg.type, "module");
 assert.equal(pkg.license, "MIT");
@@ -71,6 +72,7 @@ for (const phrase of [
   "## Build Metadata",
   "releaseInfo()",
   "BUILD_VERSION",
+  "DATE defaults to the current commit timestamp",
   `| ${packageReleaseVersion} | github.com/dnoegel/rasterklang-cli ${engineVersion} |`,
   "## Browser Compatibility",
   "Chrome/Chromium",
@@ -93,6 +95,16 @@ for (const phrase of [
 ]) {
   assert.ok(readme.includes(phrase), `README.md should document: ${phrase}`);
 }
+
+assert.ok(
+  !makefile.includes("DATE ?= $(shell date -u"),
+  "Makefile DATE default must not use wall-clock time because it dirties checked website WASM assets",
+);
+assert.match(
+  makefile,
+  /DATE \?= \$\(shell git log -1 --format=%cI/,
+  "Makefile DATE default should use the current commit timestamp for deterministic local builds",
+);
 
 for (const phrase of [
   "export interface RasterklangReleaseInfo",

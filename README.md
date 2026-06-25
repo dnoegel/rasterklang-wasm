@@ -116,7 +116,10 @@ console.log(info.version, info.commit, info.date, info.runtime);
 `make build` and `make dist` inject `BUILD_VERSION`, `COMMIT`, and `DATE` with
 Go linker flags. Release builds pass the tag through `VERSION=v0.1.0 make dist`;
 development builds derive `BUILD_VERSION` from `git describe --tags --dirty
---always` when `VERSION` is empty.
+--always` when `VERSION` is empty. DATE defaults to the current commit timestamp
+so repeated local `make build` or website `make wasm` runs do not
+dirty checked WASM assets just because wall-clock time changed; release
+automation can still override `DATE` explicitly.
 
 ### Standalone Preflight
 
