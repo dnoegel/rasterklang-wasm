@@ -17,6 +17,9 @@ tag is created. The project follows semantic version-style tags such as
   verification instructions, and `application/wasm` serving guidance.
 - Added `make check` as the local and CI release gate for formatting, JavaScript
   syntax, package/browser contracts, Go vet, and WASM-target Go tests.
+- Replaced remaining public "POC" support wording with release-grade
+  Rasterklang support labels and isolated the package-contract npm cache for
+  reproducible local checks.
 
 ## v0.1.0
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const packageJsonPath = "package.json";
@@ -170,8 +170,15 @@ assert.equal(provenance.artifact.name, archiveName);
 assert.equal(provenance.artifact.targetOs, "js");
 assert.equal(provenance.artifact.targetArch, "wasm");
 
+const npmCache = join("dist", ".npm-cache");
+mkdirSync(npmCache, { recursive: true });
 const packOutput = execFileSync("npm", ["pack", "--dry-run", "--json"], {
   encoding: "utf8",
+  env: {
+    ...process.env,
+    npm_config_cache: npmCache,
+    npm_config_update_notifier: "false",
+  },
 });
 const [pack] = JSON.parse(packOutput);
 assert.equal(pack.name, pkg.name);

@@ -497,7 +497,7 @@ Metadata includes:
   smoother.
 - There is no seeking, looping, built-in volume control, waveform display, or
   playlist management yet.
-- Unsupported tunes surface the same POC engine limits as `rasterklang`.
+- Unsupported tunes surface the same Rasterklang support limits as the CLI.
 - SID files do not carry reliable song lengths, so playback is open-ended until
   stopped.
 

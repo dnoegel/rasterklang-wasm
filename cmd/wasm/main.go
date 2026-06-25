@@ -111,7 +111,7 @@ func loadSID(_ js.Value, args []js.Value) any {
 	currentDebug = nil
 
 	supportError := ""
-	if err := tune.ValidateForPOC(); err != nil {
+	if err := tune.ValidateForPlayback(); err != nil {
 		supportError = err.Error()
 	}
 
