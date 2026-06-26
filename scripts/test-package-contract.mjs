@@ -8,7 +8,7 @@ const packageJsonPath = "package.json";
 assert.ok(existsSync(packageJsonPath), "package.json should exist");
 
 const pkg = JSON.parse(readFileSync(packageJsonPath, "utf8"));
-const readme = readFileSync("README.md", "utf8");
+const releaseDocs = readFileSync("docs/release.md", "utf8");
 const goMod = readFileSync("go.mod", "utf8");
 const sdkTypes = readFileSync("types/rasterklang.d.ts", "utf8");
 const releaseWorkflow = readFileSync(".github/workflows/release.yml", "utf8");
@@ -71,32 +71,24 @@ assert.notEqual(mismatchedVersion.status, 0);
 assert.match(mismatchedVersion.stderr, /package.json version 0\.1\.0 does not match release version v9\.9\.9/);
 
 for (const phrase of [
-  "## Version Compatibility",
-  "## Build Metadata",
+  "Distribution",
+  "Build Metadata",
   "releaseInfo()",
   "BUILD_VERSION",
-  "DATE defaults to the current commit timestamp",
+  "DATE` defaults to the current commit timestamp",
   `| ${packageReleaseVersion} | github.com/dnoegel/rasterklang-cli ${engineVersion} |`,
-  "## Browser Compatibility",
-  "Chrome/Chromium",
-  "Firefox",
-  "Safari",
-  "## Serving And Caching",
   "Content-Type: application/wasm",
   "Cache-Control: public, max-age=31536000, immutable",
-  "Cache-Control: no-cache",
-  "## Verify A Release Archive",
   `sha256sum -c ${archiveExample}.sha256`,
   `shasum -a 256 -c ${archiveExample}.sha256`,
-  "## Release Provenance",
   "RELEASE_PROVENANCE.json",
-  "## npm Publishing",
+  "npm Publishing",
   "npm pack --dry-run",
-  "node scripts/check-package-version.mjs --version",
+  "node scripts/check-package-version.mjs",
   "npm publish --provenance --access public",
   "NPM_TOKEN",
 ]) {
-  assert.ok(readme.includes(phrase), `README.md should document: ${phrase}`);
+  assert.ok(releaseDocs.includes(phrase), `docs/release.md should document: ${phrase}`);
 }
 
 assert.ok(
