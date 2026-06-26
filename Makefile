@@ -79,7 +79,8 @@ check:
 	GOOS=js GOARCH=wasm $(GO) test -exec="$(GO_WASM_EXEC)" ./...
 
 npm-pack: dist
-	npm pack --dry-run
+	mkdir -p "$(DIST)/.npm-cache"
+	npm_config_cache="$(DIST)/.npm-cache" npm_config_update_notifier=false npm pack --dry-run --json
 
 build: | $(DIST_STAMP)
 	cp "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" "$(WASM_EXEC)"

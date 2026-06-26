@@ -105,6 +105,21 @@ assert.match(
   /DATE \?= \$\(shell git log -1 --format=%cI/,
   "Makefile DATE default should use the current commit timestamp for deterministic local builds",
 );
+assert.match(
+  makefile,
+  /npm_config_cache="\$\(DIST\)\/\.npm-cache"/,
+  "make npm-pack should use an isolated npm cache under dist/",
+);
+assert.match(
+  makefile,
+  /npm_config_update_notifier=false/,
+  "make npm-pack should disable npm's update notifier for release checks",
+);
+assert.match(
+  makefile,
+  /npm pack --dry-run --json/,
+  "make npm-pack should emit machine-readable npm pack dry-run output",
+);
 
 for (const phrase of [
   "export interface RasterklangReleaseInfo",
