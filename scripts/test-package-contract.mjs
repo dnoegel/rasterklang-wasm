@@ -16,6 +16,8 @@ assert.equal(pkg.name, "rasterklang-wasm");
 assert.equal(pkg.type, "module");
 assert.equal(pkg.license, "MIT");
 assert.equal(pkg.sideEffects, false);
+assert.equal(pkg.main, "./dist/rasterklang.js");
+assert.equal(pkg.types, "./dist/rasterklang.d.ts");
 assert.equal(pkg.repository?.type, "git");
 assert.equal(pkg.repository?.url, "git+https://github.com/dnoegel/rasterklang-wasm.git");
 assert.equal(pkg.bugs?.url, "https://github.com/dnoegel/rasterklang-wasm/issues");

@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "description": "Browser SDK for playing Commodore 64 SID tunes with Rasterklang WebAssembly.",
   "type": "module",
+  "main": "./dist/rasterklang.js",
+  "types": "./dist/rasterklang.d.ts",
   "license": "MIT",
   "repository": {
     "type": "git",
