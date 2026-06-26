@@ -422,7 +422,12 @@ export function int16ToFloat32(samples) {
 
 function int16ToAudioBuffer(audioContext, samples, sampleRate) {
   const buffer = audioContext.createBuffer(1, samples.length, sampleRate);
-  buffer.copyToChannel(int16ToFloat32(samples), 0);
+  const channel = int16ToFloat32(samples);
+  if (typeof buffer.copyToChannel === "function") {
+    buffer.copyToChannel(channel, 0);
+  } else {
+    buffer.getChannelData(0).set(channel);
+  }
   return buffer;
 }
 

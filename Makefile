@@ -47,8 +47,10 @@ test:
 	node --check demo/app.js
 	node --check scripts/test-package-contract.mjs
 	node --check scripts/test-sdk-release-info.mjs
+	node --check scripts/test-audio-buffer-compat.mjs
 	node --check scripts/test-browser-sdk.mjs
 	node scripts/test-sdk-release-info.mjs
+	node scripts/test-audio-buffer-compat.mjs
 	node scripts/test-browser-sdk.mjs
 	GOOS=js GOARCH=wasm $(GO) test -exec="$(GO_WASM_EXEC)" ./...
 
@@ -69,9 +71,11 @@ check:
 	bash scripts/check-release-docs.sh
 	node --check scripts/test-package-contract.mjs
 	node --check scripts/test-sdk-release-info.mjs
+	node --check scripts/test-audio-buffer-compat.mjs
 	node --check scripts/test-browser-sdk.mjs
 	node scripts/test-sdk-release-info.mjs
 	node scripts/test-package-contract.mjs
+	node scripts/test-audio-buffer-compat.mjs
 	$(MAKE) license-report
 	$(MAKE) release-provenance
 	node scripts/test-browser-sdk.mjs
