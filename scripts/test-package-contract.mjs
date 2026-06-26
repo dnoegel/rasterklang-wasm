@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const packageJsonPath = "package.json";
@@ -148,10 +149,15 @@ const version = process.env.TEST_WASM_PACKAGE_VERSION || "v0.0.0-package-test";
 const archiveName = `rasterklang-wasm-${version}.tar.gz`;
 const archivePath = join("dist", archiveName);
 const checksumPath = `${archivePath}.sha256`;
+const goBuildCache = mkdtempSync(join(tmpdir(), "rasterklang-wasm-package-go-build-"));
 
 rmSync("dist", { recursive: true, force: true });
 execFileSync("make", ["dist", `VERSION=${version}`], {
   encoding: "utf8",
+  env: {
+    ...process.env,
+    GOCACHE: process.env.GOCACHE || goBuildCache,
+  },
   stdio: "pipe",
 });
 
@@ -217,3 +223,5 @@ const packedFiles = new Set(pack.files.map((entry) => entry.path));
 for (const expectedFile of pkg.files) {
   assert.ok(packedFiles.has(expectedFile), `npm pack should include ${expectedFile}`);
 }
+
+rmSync(goBuildCache, { recursive: true, force: true });

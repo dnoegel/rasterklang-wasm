@@ -30,6 +30,16 @@ jobs:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
+      - name: Require release tag
+        run: |
+          case "${GITHUB_REF}" in
+            refs/tags/v*) ;;
+            *)
+              echo "Release workflow must run from a v* tag, got ${GITHUB_REF}"
+              exit 1
+              ;;
+          esac
+
       - name: Run tests
         run: make check
 
