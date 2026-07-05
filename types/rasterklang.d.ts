@@ -27,11 +27,17 @@ export interface RasterklangCapabilities {
     snapshot: boolean;
     stepFrame: boolean;
     stepInstruction: boolean;
+    live: boolean;
   };
   limits: {
     maxChunkFrames: number;
     maxTraceEvents: number;
   };
+}
+
+export interface RasterklangLiveOptions {
+  sampleRate?: number;
+  model?: "6581" | "8580";
 }
 
 export interface RasterklangReleaseInfo {
@@ -118,8 +124,19 @@ export declare class Rasterklang {
   createStream(options?: RasterklangStreamOptions): RasterklangStream;
   createAudioPlayer(options?: RasterklangAudioPlayerOptions): RasterklangAudioPlayer;
   createDebugStream(options?: RasterklangDebugStreamOptions): RasterklangDebugStream;
+  startLive(options?: RasterklangLiveOptions): RasterklangLiveSession;
   capabilities(): RasterklangCapabilities;
   releaseInfo(): RasterklangReleaseInfo;
+}
+
+export declare class RasterklangLiveSession {
+  sampleRate: number;
+  stopped: boolean;
+
+  poke(addr: number, value: number): this;
+  readChunk(frames?: number): Int16Array;
+  registers(): number[];
+  stop(): void;
 }
 
 export declare class RasterklangTune {

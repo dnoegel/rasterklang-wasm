@@ -13,6 +13,7 @@ var (
 	currentTune   *sid.Tune
 	currentStream *sid.Stream
 	currentDebug  *sid.DebugStream
+	currentLive   *sid.LiveSession
 	callbacks     []js.Func
 	version       = "dev"
 	commit        = "unknown"
@@ -34,6 +35,8 @@ func main() {
 	register(api, "skipSamples", skipSamples)
 	register(api, "fastForwardSamples", fastForwardSamples)
 	register(api, "startDebug", startDebugStream)
+	register(api, "startLive", startLive)
+	register(api, "pokeRegister", pokeRegister)
 	register(api, "readTrace", readTrace)
 	register(api, "snapshot", snapshot)
 	register(api, "setAudioControls", setAudioControls)
@@ -65,6 +68,7 @@ func capabilities(_ js.Value, _ []js.Value) any {
 			"snapshot":        true,
 			"stepFrame":       true,
 			"stepInstruction": true,
+			"live":            true,
 		}),
 		"limits": object(map[string]any{
 			"maxChunkFrames": maxChunkFrames,
@@ -168,7 +172,7 @@ func startStream(_ js.Value, args []js.Value) any {
 }
 
 func readChunk(_ js.Value, args []js.Value) any {
-	if currentStream == nil && currentDebug == nil {
+	if currentStream == nil && currentDebug == nil && currentLive == nil {
 		return failure(errors.New("start playback first"))
 	}
 
@@ -183,9 +187,12 @@ func readChunk(_ js.Value, args []js.Value) any {
 	samples := make([]int16, frames)
 	n := 0
 	var err error
-	if currentDebug != nil {
+	switch {
+	case currentLive != nil:
+		n = currentLive.ReadSamples(samples)
+	case currentDebug != nil:
 		n, err = currentDebug.ReadSamples(samples)
-	} else {
+	default:
 		n, err = currentStream.ReadSamples(samples)
 	}
 	if err != nil {
@@ -290,6 +297,43 @@ func startDebugStream(_ js.Value, args []js.Value) any {
 	})
 }
 
+func startLive(_ js.Value, args []js.Value) any {
+	sampleRate := 44100
+	if len(args) >= 1 && args[0].Truthy() {
+		sampleRate = args[0].Int()
+	}
+	if sampleRate <= 0 {
+		return failure(errors.New("sample rate must be positive"))
+	}
+
+	model := sid.Model6581
+	if len(args) >= 2 && args[1].Truthy() && args[1].String() == "8580" {
+		model = sid.Model8580
+	}
+
+	currentTune = nil
+	currentStream = nil
+	currentDebug = nil
+	currentLive = sid.NewLiveSession(sampleRate, model)
+	return success(map[string]any{"sampleRate": sampleRate})
+}
+
+func pokeRegister(_ js.Value, args []js.Value) any {
+	if currentLive == nil {
+		return failure(errors.New("start a live session first"))
+	}
+	if len(args) < 2 {
+		return failure(errors.New("pokeRegister requires (addr, value)"))
+	}
+	addr := args[0].Int()
+	reg := addr
+	if addr >= 0xD400 {
+		reg = addr - 0xD400
+	}
+	currentLive.Poke(byte(reg&0x1f), byte(args[1].Int()))
+	return success(nil)
+}
+
 func readTrace(_ js.Value, args []js.Value) any {
 	if currentDebug == nil {
 		return failure(errors.New("start a debug stream first"))
@@ -314,12 +358,27 @@ func readTrace(_ js.Value, args []js.Value) any {
 }
 
 func snapshot(_ js.Value, _ []js.Value) any {
+	if currentLive != nil {
+		return success(map[string]any{
+			"snapshot": object(map[string]any{
+				"registers": registerArray(currentLive.Registers()),
+			}),
+		})
+	}
 	if currentDebug == nil {
 		return failure(errors.New("start a debug stream first"))
 	}
 	return success(map[string]any{
 		"snapshot": debugSnapshot(currentDebug.Snapshot()),
 	})
+}
+
+func registerArray(regs [32]byte) js.Value {
+	arr := js.Global().Get("Array").New(len(regs))
+	for i, v := range regs {
+		arr.SetIndex(i, int(v))
+	}
+	return arr
 }
 
 func setAudioControls(_ js.Value, args []js.Value) any {
@@ -385,6 +444,7 @@ func stepInstruction(_ js.Value, args []js.Value) any {
 func stopStream(_ js.Value, _ []js.Value) any {
 	currentStream = nil
 	currentDebug = nil
+	currentLive = nil
 	return success(nil)
 }
 

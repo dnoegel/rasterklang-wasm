@@ -103,6 +103,59 @@ export class Rasterklang {
     assertOK(result);
     return new RasterklangDebugStream(this.api, result);
   }
+
+  startLive(options = {}) {
+    if (typeof this.api.startLive !== "function") {
+      throw new RasterklangError("This rasterklang-wasm build does not support live mode.");
+    }
+    const sampleRate = numberOrDefault(options.sampleRate, 44100);
+    const model = options.model === "8580" ? "8580" : "6581";
+    const result = this.api.startLive(sampleRate, model);
+    assertOK(result);
+    return new RasterklangLiveSession(this.api, result);
+  }
+}
+
+// A live, register-poke SID session. No tune, no CPU: poke $D400-$D41F and pull
+// PCM. Everything is deterministic in the order pokes are applied.
+export class RasterklangLiveSession {
+  constructor(api, info = {}) {
+    this.api = api;
+    this.sampleRate = info.sampleRate ?? 44100;
+    this.stopped = false;
+  }
+
+  poke(addr, value) {
+    const result = this.api.pokeRegister(addr, value);
+    assertOK(result);
+    return this;
+  }
+
+  readChunk(frames = defaultChunkFrames) {
+    this.assertLive();
+    return readSampleChunk(this.api, frames);
+  }
+
+  // Returns the current 32-entry SID register bank as an array of ints.
+  registers() {
+    this.assertLive();
+    const result = this.api.snapshot();
+    assertOK(result);
+    return result.snapshot?.registers ?? [];
+  }
+
+  stop() {
+    if (this.stopped) return;
+    this.stopped = true;
+    const result = this.api.stop();
+    assertOK(result);
+  }
+
+  assertLive() {
+    if (this.stopped) {
+      throw new RasterklangError("Live session has been stopped.");
+    }
+  }
 }
 
 export class RasterklangTune {
@@ -535,6 +588,7 @@ function normalizeCapabilities(capabilities) {
       snapshot: Boolean(features.snapshot),
       stepFrame: Boolean(features.stepFrame),
       stepInstruction: Boolean(features.stepInstruction),
+      live: Boolean(features.live),
     },
     limits: {
       maxChunkFrames: numberOrDefault(limits.maxChunkFrames, defaultMaxChunkFrames),
@@ -575,6 +629,7 @@ function defaultCapabilities() {
       snapshot: false,
       stepFrame: false,
       stepInstruction: false,
+      live: false,
     },
     limits: {
       maxChunkFrames: defaultMaxChunkFrames,
